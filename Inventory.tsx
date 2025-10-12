@@ -9,14 +9,20 @@ import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 import { Button } from '../UI/Button';
 import { SearchInput } from '../UI/SearchInput';
 import { Badge } from '../UI/Badge';
-import { 
-  Plus, 
-  Package, 
-  Filter, 
-  Download, 
+import {
+  Plus,
+  Package,
+  Filter,
+  Download,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Grid3x3,
+  List,
+  ChevronDown,
+  ChevronRight,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export const InventoryPage: React.FC = () => {
@@ -31,6 +37,9 @@ export const InventoryPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'out_of_stock' | 'discontinued'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'compact' | 'card'>('compact');
+  const [groupBy, setGroupBy] = useState<'none' | 'category' | 'supplier'>('category');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Mock suppliers for demonstration
   const mockSuppliers: Supplier[] = [
@@ -288,10 +297,43 @@ export const InventoryPage: React.FC = () => {
   const totalValue = inventory.reduce((sum, item) => sum + (item.quantityInStock * item.purchasePrice), 0);
   const categories = [...new Set(inventory.map(item => item.category))];
 
+  const toggleGroup = (groupName: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName);
+    } else {
+      newExpanded.add(groupName);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const groupedInventory = () => {
+    if (groupBy === 'none') {
+      return { 'All Items': filteredInventory };
+    }
+
+    const grouped: { [key: string]: InventoryWithSupplier[] } = {};
+
+    filteredInventory.forEach(item => {
+      const key = groupBy === 'category' ? item.category : item.supplier.companyName;
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(item);
+    });
+
+    return grouped;
+  };
+
+  useEffect(() => {
+    const groups = Object.keys(groupedInventory());
+    setExpandedGroups(new Set(groups));
+  }, [groupBy, filteredInventory]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -306,7 +348,7 @@ export const InventoryPage: React.FC = () => {
         </div>
         <Button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Item
@@ -317,7 +359,7 @@ export const InventoryPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-indigo-600" />
+            <Package className="w-8 h-8 text-blue-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total Items</p>
               <p className="text-2xl font-bold text-gray-900">{totalItems}</p>
@@ -374,11 +416,11 @@ export const InventoryPage: React.FC = () => {
               onChange={setSearchTerm}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'out_of_stock' | 'discontinued')}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -388,17 +430,36 @@ export const InventoryPage: React.FC = () => {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Categories</option>
               {categories.map(category => (
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            <Button variant="outline" className="flex items-center">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as 'none' | 'category' | 'supplier')}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="none">No Grouping</option>
+              <option value="category">Group by Type</option>
+              <option value="supplier">Group by Supplier</option>
+            </select>
+            <div className="flex border border-gray-300 rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode('compact')}
+                className={`px-3 py-2 text-sm ${viewMode === 'compact' ? 'bg-blue-50 text-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('card')}
+                className={`px-3 py-2 text-sm border-l border-gray-300 ${viewMode === 'card' ? 'bg-blue-50 text-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+            </div>
             <Button variant="outline" className="flex items-center">
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -407,7 +468,7 @@ export const InventoryPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Inventory Grid */}
+      {/* Inventory Display */}
       {filteredInventory.length === 0 ? (
         <div className="text-center py-12">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -418,14 +479,14 @@ export const InventoryPage: React.FC = () => {
           {!searchTerm && (
             <Button
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Item
             </Button>
           )}
         </div>
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredInventory.map((item) => (
             <InventoryCard
@@ -435,6 +496,102 @@ export const InventoryPage: React.FC = () => {
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
             />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(groupedInventory()).map(([groupName, items]) => (
+            <div key={groupName} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div
+                className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleGroup(groupName)}
+              >
+                <div className="flex items-center">
+                  {expandedGroups.has(groupName) ? (
+                    <ChevronDown className="w-5 h-5 text-gray-500 mr-2" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-500 mr-2" />
+                  )}
+                  <h3 className="text-lg font-semibold text-gray-900">{groupName}</h3>
+                  <Badge variant="secondary" className="ml-3">
+                    {items.length} items
+                  </Badge>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Total Value: {items.reduce((sum, item) => sum + (item.quantityInStock * item.purchasePrice), 0).toLocaleString()} MAD
+                </div>
+              </div>
+              {expandedGroups.has(groupName) && (
+                <div className="divide-y divide-gray-200">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleViewItem(item)}
+                    >
+                      <div className="flex-1 grid grid-cols-12 gap-3 items-center min-w-0">
+                        <div className="col-span-3 flex items-center min-w-0">
+                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center mr-3 flex-shrink-0">
+                            <Package className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-gray-900 truncate">{item.partName}</div>
+                            <div className="text-xs text-gray-500 truncate">{item.partNumber}</div>
+                          </div>
+                        </div>
+                        <div className="col-span-2 min-w-0">
+                          <div className="text-sm text-gray-600 truncate">{item.brand}</div>
+                          <div className="text-xs text-gray-500 truncate">{groupBy !== 'category' ? item.category : item.supplier.companyName}</div>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <div className="text-sm font-medium text-gray-900">{item.quantityInStock}</div>
+                          <div className="text-xs text-gray-500">{item.unitOfMeasure}</div>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <div className="text-xs text-gray-500">Min: {item.minStockLevel}</div>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <div className="text-sm text-gray-600">{item.location}</div>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <div className="text-sm text-gray-600">{item.purchasePrice.toFixed(2)} MAD</div>
+                          <div className="text-xs text-gray-500">{item.salePrice.toFixed(2)} MAD</div>
+                        </div>
+                        <div className="col-span-1 flex items-center justify-center">
+                          {item.status === 'ACTIVE' ? (
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          ) : item.status === 'OUT_OF_STOCK' ? (
+                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="col-span-1 flex justify-end space-x-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick(item);
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded"
+                          >
+                            <Edit className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(item);
+                            }}
+                            className="p-1 hover:bg-red-100 rounded"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
