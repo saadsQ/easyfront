@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Supplier } from '../../types/supplier';
 import { SupplierCard } from './SupplierCard';
+import { EnhancedSuppliers } from './EnhancedSuppliers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { EditSupplierModal } from './EditSupplierModal';
 import { ViewSupplierModal } from './ViewSupplierModal';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 import { Button } from '../UI/Button';
 import { SearchInput } from '../UI/SearchInput';
-import { Badge } from '../UI/Badge';
-import { Plus, Building2, Filter, Download } from 'lucide-react';
+import { Plus, Building2, Filter, Download, Sparkles, Grid3X3 } from 'lucide-react';
+
+type ViewType = 'original' | 'enhanced';
 
 export const Suppliers: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -21,6 +23,7 @@ export const Suppliers: React.FC = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [viewType, setViewType] = useState<ViewType>('original');
 
   // Mock data for demonstration
   useEffect(() => {
@@ -114,20 +117,21 @@ export const Suppliers: React.FC = () => {
     setFilteredSuppliers(filtered);
   }, [suppliers, searchTerm, filterStatus]);
 
-  const handleAddSupplier = (supplier: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleAddSupplier = (supplier: any) => {
     const newSupplier: Supplier = {
       ...supplier,
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      isActive: true,
     };
     setSuppliers(prev => [...prev, newSupplier]);
     setIsAddModalOpen(false);
   };
 
-  const handleEditSupplier = (supplier: Supplier) => {
+  const handleEditSupplier = (supplier: any) => {
     setSuppliers(prev =>
-      prev.map(s => s.id === supplier.id ? { ...supplier, updatedAt: new Date().toISOString() } : s)
+      prev.map(s => s.id === supplier.id ? { ...s, ...supplier, updatedAt: new Date().toISOString() } : s)
     );
     setIsEditModalOpen(false);
     setSelectedSupplier(null);
@@ -173,125 +177,161 @@ export const Suppliers: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Suppliers</h1>
           <p className="text-gray-600">Manage your Moroccan suppliers and partners</p>
         </div>
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Supplier
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Building2 className="w-8 h-8 text-indigo-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
-              <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
+        <div className="flex items-center gap-3">
+          {/* View Type Toggle */}
+          <div className="bg-white rounded-lg border border-gray-200 p-1">
+            <div className="flex">
+              <button
+                onClick={() => setViewType('original')}
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  viewType === 'original'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Grid3X3 className="w-4 h-4 mr-2" />
+                Original
+              </button>
+              <button
+                onClick={() => setViewType('enhanced')}
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  viewType === 'enhanced'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Enhanced
+              </button>
             </div>
           </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Active</p>
-              <p className="text-2xl font-bold text-gray-900">{activeSuppliers}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Inactive</p>
-              <p className="text-2xl font-bold text-gray-900">{inactiveSuppliers}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Avg Rating</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {(suppliers.reduce((acc, s) => acc + s.rating, 0) / suppliers.length || 0).toFixed(1)}
-              </p>
-            </div>
-          </div>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Supplier
+          </Button>
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <SearchInput
-              placeholder="Search suppliers by name, contact, city, or ICE..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <Button variant="outline" className="flex items-center">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-            <Button variant="outline" className="flex items-center">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Suppliers Grid */}
-      {filteredSuppliers.length === 0 ? (
-        <div className="text-center py-12">
-          <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No suppliers found</h3>
-          <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Get started by adding your first supplier'}
-          </p>
-          {!searchTerm && (
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Supplier
-            </Button>
-          )}
-        </div>
+      {/* Render based on view type */}
+      {viewType === 'enhanced' ? (
+        <EnhancedSuppliers />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSuppliers.map((supplier) => (
-            <SupplierCard
-              key={supplier.id}
-              supplier={supplier}
-              onView={handleViewSupplier}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          ))}
-        </div>
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center">
+                <Building2 className="w-8 h-8 text-indigo-600" />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
+                  <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-2xl font-bold text-gray-900">{activeSuppliers}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Inactive</p>
+                  <p className="text-2xl font-bold text-gray-900">{inactiveSuppliers}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Avg Rating</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {(suppliers.reduce((acc, s) => acc + s.rating, 0) / suppliers.length || 0).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Search */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <SearchInput
+                  placeholder="Search suppliers by name, contact, city, or ICE..."
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <Button variant="outline" className="flex items-center">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                </Button>
+                <Button variant="outline" className="flex items-center">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Suppliers Grid */}
+          {filteredSuppliers.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No suppliers found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchTerm ? 'Try adjusting your search criteria' : 'Get started by adding your first supplier'}
+              </p>
+              {!searchTerm && (
+                <Button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Supplier
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredSuppliers.map((supplier) => (
+                <SupplierCard
+                  key={supplier.id}
+                  supplier={supplier}
+                  onView={handleViewSupplier}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Modals */}
